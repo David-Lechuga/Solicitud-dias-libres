@@ -391,11 +391,11 @@ if(deleteRequestBtn){
 
 // GitHub Sync Configuration & Integration (Auto-save on change, Read-only on demand)
 let ghConfig = JSON.parse(localStorage.getItem("pl_gh_config")) || {
-  owner: "",
-  repo: "",
+  owner: "David-Lechuga",
+  repo: "Solicitud-dias-libres",
   branch: "main",
   path: "datos.json",
-  token: ""
+  token: "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"
 };
 
 function initGitHubSettingsForm(){
