@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b4e">
+  <meta name="description" content="Gestión de solicitudes de días libres de la Policía Local">
+  <title>Gestión de Solicitudes | Policía Local</title>
+  <link rel="icon" type="image/png" href="icono-192.png">
+  <link rel="apple-touch-icon" href="icono-192.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-mark crest" src="icono-192.png" alt="Escudo de la Policía Local de Vejer">
+      <div>
+        <div class="brand-title">GESTIÓN DE SOLICITUDES</div>
+        <div class="brand-subtitle">POLICÍA LOCAL DE VEJER · JEFATURA</div>
+      </div>
+    </div>
+    <div class="header-tag">CONTROL DE DÍAS LIBRES</div>
+  </header>
+
+  <main class="app-shell">
+    <nav class="main-nav" aria-label="Navegación principal">
+      <button class="nav-btn active" data-view="weekly">▦ <span>Visualizador semanal</span></button>
+      <button class="nav-btn" data-view="new">＋ <span>Nueva solicitud</span></button>
+      <button class="nav-btn" data-view="history">▤ <span>Histórico</span></button>
+      <button class="nav-btn" data-view="settings">⚙ <span>Configuración</span></button>
+    </nav>
+
+    <section id="view-weekly" class="view active">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">PLANIFICACIÓN</p>
+          <h1>Visualizador semanal</h1>
+          <p class="muted">Las solicitudes pendientes ordinarias se ordenan por fecha y hora de presentación dentro de cada semana.</p>
+        </div>
+        <div class="week-controls">
+          <button class="btn btn-light" id="prev-week">‹ Semana anterior</button>
+          <button class="btn btn-primary" id="this-week">Hoy</button>
+          <button class="btn btn-light" id="next-week">Semana siguiente ›</button>
+          <button class="btn btn-primary" id="print-week">Imprimir semana</button>
+        </div>
+      </div>
+      <div class="week-title-row">
+        <h2 id="week-label">SEMANA</h2>
+        <div class="legend">
+          <span><i class="dot pending"></i>Pendiente</span>
+          <span><i class="dot special-pending"></i>Horas Sindicales / Prevención</span>
+          <span><i class="dot granted"></i>Concedido</span>
+          <span><i class="dot denied"></i>No concedido</span>
+        </div>
+      </div>
+      <div id="week-grid" class="week-grid"></div>
+      <div class="priority-note"><strong>Prioridad semanal:</strong> la numeración se calcula conjuntamente para los siete días y solo incluye solicitudes pendientes ordinarias. Las Horas Sindicales y las Horas de Prevención no computan. Al resolver una solicitud, las posiciones restantes se recalculan automáticamente.</div>
+    </section>
+
+    <section id="view-new" class="view">
+      <div class="section-heading">
+        <div><p class="eyebrow">REGISTRO</p><h1>Nueva solicitud</h1><p class="muted">Introduce los datos de la petición recibida.</p></div>
+      </div>
+      <form id="request-form" class="panel form-panel">
+        <div class="form-grid">
+          <label>Agente solicitante<select id="agent" required><option value="">Seleccionar agente</option></select></label>
+          <label>Tipo de día libre<select id="leave-type" required><option value="">Seleccionar tipo</option></select></label>
+          <label>Fecha solicitada<input id="requested-date" type="date" required></label>
+          <label>Turno solicitado<select id="shift" required><option value="">Seleccionar turno</option><option>MAÑANA</option><option>NOCHE</option></select></label>
+          <label>Fecha de presentación<input id="submitted-date" type="date" required></label>
+          <label>Hora de presentación<input id="submitted-time" type="time" step="60" required></label>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary btn-large" type="submit">GUARDAR SOLICITUD</button><span class="form-hint">La fecha y hora de presentación se introducen manualmente.</span></div>
+      </form>
+    </section>
+
+    <section id="view-history" class="view">
+      <div class="section-heading"><div><p class="eyebrow">CONSULTA</p><h1>Histórico de solicitudes</h1><p class="muted">Consulta las solicitudes registradas y su resolución.</p></div></div>
+      <div class="panel filters">
+        <label>Desde<input id="history-from" type="date"></label>
+        <label>Hasta<input id="history-to" type="date"></label>
+        <label>Estado<select id="history-status"><option value="">Todos los estados</option><option value="pending">Pendiente</option><option value="granted">Concedido</option><option value="denied">No concedido</option></select></label>
+        <button class="btn btn-primary" id="apply-filters">Aplicar filtros</button>
+        <button class="btn btn-light" id="clear-filters">Limpiar</button>
+      </div>
+      <div class="panel table-wrap">
+        <table><thead><tr><th>Fecha solicitada</th><th>Agente</th><th>Tipo</th><th>Turno</th><th>Estado</th><th>Agente llamado</th><th>Resolución</th></tr></thead><tbody id="history-body"></tbody></table>
+      </div>
+    </section>
+
+    <section id="view-settings" class="view">
+      <div class="section-heading"><div><p class="eyebrow">ADMINISTRACIÓN</p><h1>Configuración y Copias de Seguridad</h1></div></div>
+      <div class="settings-grid">
+        <div class="panel">
+          <h3>Agentes de la plantilla</h3>
+          <form id="add-agent-form" class="config-form">
+            <div class="config-input-row">
+              <input type="text" id="new-agent-name" placeholder="Nombre del nuevo agente..." required>
+              <button type="submit" class="btn btn-primary">Añadir</button>
+            </div>
+          </form>
+          <ul id="agents-list" class="admin-list"></ul>
+        </div>
+        <div class="panel">
+          <h3>Tipos de día libre</h3>
+          <form id="add-type-form" class="config-form">
+            <div class="config-input-row">
+              <input type="text" id="new-type-name" placeholder="Nuevo tipo de día..." required>
+              <button type="submit" class="btn btn-primary">Añadir</button>
+            </div>
+          </form>
+          <ul id="types-list" class="admin-list"></ul>
+        </div>
+      </div>
+      
+      <div class="panel backup-panel" style="margin-top:20px;">
+        <h3>Copias de seguridad y Base de datos Local</h3>
+        <p class="muted">Exporta o importa todos los datos de solicitudes, agentes y configuración en formato JSON para respaldar o transferir la información entre dispositivos.</p>
+        <div class="backup-actions" style="display:flex;gap:12px;margin-top:15px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="export-json">📥 Exportar Copia JSON</button>
+          <label class="btn btn-light" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;">
+            📤 Importar Copia JSON
+            <input type="file" id="import-json" accept=".json" style="display:none;">
+          </label>
+          <button type="button" class="btn btn-light" id="reset-data" style="color:#b91c1c;border-color:#fecaca;">⚠️ Restablecer valores iniciales</button>
+        </div>
+      </div>
+
+      <div class="notice"><strong>Persistencia local activa:</strong> Todos los cambios en la configuración y las solicitudes se guardan automáticamente en el almacenamiento local del navegador (LocalStorage).</div>
+    </section>
+  </main>
+
+  <section id="print-report" aria-label="Informe semanal"></section>
+  <footer>GESTIÓN INTERNA · POLICÍA LOCAL</footer>
+
+  <dialog id="manage-dialog" class="manage-dialog">
+    <form method="dialog" class="dialog-head"><div><p class="eyebrow">DETALLE DE SOLICITUD</p><h2 id="dialog-title">Solicitud</h2></div><button class="icon-btn" aria-label="Cerrar">×</button></form>
+    <div id="dialog-details" class="dialog-details"></div>
+    <form id="manage-form">
+      <label>Agente llamado para cubrir el servicio extraordinario
+        <select id="called-agent"><option value="">Seleccionar agente</option></select>
+      </label>
+      <label class="check-row"><input type="checkbox" id="no-agent"> No hay ningún agente disponible para realizar el servicio extraordinario</label>
+      <label>Observaciones (uso interno)<textarea id="observations" rows="3" placeholder="Anotaciones opcionales..."></textarea></label>
+      <label>Resolución
+        <select id="resolution" required><option value="">Seleccionar resolución</option><option value="granted">Concedido</option><option value="denied">No concedido</option></select>
+      </label>
+      <div class="dialog-actions" style="display:flex;justify-content:space-between;align-items:center;">
+        <button type="button" class="btn btn-light" id="delete-request" style="color:#b91c1c;border-color:#fecaca;">🗑️ Eliminar solicitud</button>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-light" id="cancel-manage">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar gestión</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+  <script src="app.js"></script>
+</body>
+</html>
