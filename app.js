@@ -385,3 +385,162 @@ if(deleteRequestBtn){
     }
   });
 }
+
+// GitHub Sync Configuration & Integration
+let ghConfig = JSON.parse(localStorage.getItem("pl_gh_config")) || {
+  owner: "",
+  repo: "",
+  branch: "main",
+  path: "datos.json",
+  token: ""
+};
+
+function initGitHubSettingsForm(){
+  const ownerEl = document.querySelector("#gh-owner");
+  const repoEl = document.querySelector("#gh-repo");
+  const branchEl = document.querySelector("#gh-branch");
+  const pathEl = document.querySelector("#gh-path");
+  const tokenEl = document.querySelector("#gh-token");
+
+  if(ownerEl) ownerEl.value = ghConfig.owner;
+  if(repoEl) repoEl.value = ghConfig.repo;
+  if(branchEl) branchEl.value = ghConfig.branch || "main";
+  if(pathEl) pathEl.value = ghConfig.path || "datos.json";
+  if(tokenEl) tokenEl.value = ghConfig.token;
+}
+
+const saveGhConfigBtn = document.querySelector("#gh-save-config");
+if(saveGhConfigBtn){
+  saveGhConfigBtn.addEventListener("click", ()=>{
+    ghConfig = {
+      owner: document.querySelector("#gh-owner").value.trim(),
+      repo: document.querySelector("#gh-repo").value.trim(),
+      branch: document.querySelector("#gh-branch").value.trim() || "main",
+      path: document.querySelector("#gh-path").value.trim() || "datos.json",
+      token: document.querySelector("#gh-token").value.trim()
+    };
+    localStorage.setItem("pl_gh_config", JSON.stringify(ghConfig));
+    alert("Credenciales de GitHub guardadas correctamente.");
+  });
+}
+
+async function syncWithGitHub(silent = false){
+  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token){
+    if(!silent) alert("Por favor, configura el usuario, repositorio y el Token de GitHub en la sección de Configuración.");
+    return;
+  }
+
+  const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+  const headers = {
+    "Authorization": `Bearer ${ghConfig.token}`,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+
+  try {
+    // 1. Try to fetch existing file to get current SHA and data
+    let currentSha = null;
+    let remoteData = null;
+
+    const getRes = await fetch(`${url}?ref=${ghConfig.branch}`, { headers });
+    if(getRes.ok){
+      const fileData = await getRes.json();
+      currentSha = fileData.sha;
+      // Decode base64 content
+      const jsonString = new TextDecoder().decode(Uint8Array.from(atob(fileData.content), c => c.charCodeAt(0)));
+      remoteData = JSON.parse(jsonString);
+    } else if(getRes.status !== 404){
+      const errJson = await getRes.json();
+      throw new Error(errJson.message || "Error al conectar con GitHub");
+    }
+
+    // Compare or merge / push local state
+    // For simplicity and full GitHub as single source of truth:
+    // If remote exists and has data, we can merge or ask, or push local data to remote.
+    // Let's push local data to GitHub so any device update is propagated, or if local is empty/older, pull.
+    // Actually, let's push current local state to GitHub (or if remote is newer, pull).
+    
+    const payloadData = {
+      version: "1.0",
+      syncDate: new Date().toISOString(),
+      agents: AGENTS,
+      leaveTypes: LEAVE_TYPES,
+      requests: requests
+    };
+
+    const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(payloadData, null, 2))));
+
+    const putBody = {
+      message: `Sync solicitudes PL - ${new Date().toLocaleString()}`,
+      content: contentEncoded,
+      branch: ghConfig.branch
+    };
+    if(currentSha) putBody.sha = currentSha;
+
+    const putRes = await fetch(url, {
+      method: "PUT",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify(putBody)
+    });
+
+    if(!putRes.ok){
+      const errJson = await putRes.json();
+      throw new Error(errJson.message || "Error al guardar en GitHub");
+    }
+
+    if(!silent) alert("¡Sincronización con GitHub completada con éxito!");
+  } catch(err){
+    if(!silent) alert("Error en la sincronización con GitHub: " + err.message);
+    console.error(err);
+  }
+}
+
+async function loadFromGitHub(silent = true){
+  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token) return;
+
+  const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+  const headers = {
+    "Authorization": `Bearer ${ghConfig.token}`,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+
+  try {
+    const res = await fetch(`${url}?ref=${ghConfig.branch}`, { headers });
+    if(res.ok){
+      const fileData = await res.json();
+      const jsonString = new TextDecoder().decode(Uint8Array.from(atob(fileData.content), c => c.charCodeAt(0)));
+      const data = JSON.parse(jsonString);
+      if(data.agents && data.leaveTypes && data.requests){
+        AGENTS = data.agents;
+        LEAVE_TYPES = data.leaveTypes;
+        requests = data.requests;
+        saveConfig();
+        saveRequests();
+        populateSelects();
+        renderWeek();
+        renderHistory();
+        if(!silent) alert("Datos descargados y actualizados desde GitHub.");
+      }
+    }
+  } catch(err){
+    console.error("No se pudo cargar automáticamente desde GitHub:", err);
+  }
+}
+
+const syncNowBtn = document.querySelector("#gh-sync-now");
+if(syncNowBtn){
+  syncNowBtn.addEventListener("click", async ()=>{
+    syncNowBtn.textContent = "Sincronizando...";
+    syncNowBtn.disabled = true;
+    await syncWithGitHub(false);
+    syncNowBtn.textContent = "☁️ Sincronizar con GitHub (Subir/Descargar)";
+    syncNowBtn.disabled = false;
+  });
+}
+
+// Auto load from GitHub on startup if configured
+window.addEventListener("DOMContentLoaded", ()=>{
+  initGitHubSettingsForm();
+  loadFromGitHub(true);
+});
