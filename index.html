@@ -114,6 +114,24 @@
         </div>
       </div>
       
+            <div class="panel backup-panel" style="margin-top:20px;">
+        <h3>Sincronización con GitHub (JSON Remoto)</h3>
+        <p class="muted">Conecta la aplicación directamente con un archivo <code>datos.json</code> en tu repositorio de GitHub para que todos tus dispositivos estén siempre sincronizados automáticamente.</p>
+        
+        <div class="form-grid" style="margin-top:15px; grid-template-columns: 1fr 1fr;">
+          <label>Propietario / Usuario de GitHub<input type="text" id="gh-owner" placeholder="ej. usuario-github"></label>
+          <label>Nombre del Repositorio<input type="text" id="gh-repo" placeholder="ej. solicitudes-pl"></label>
+          <label>Rama (Branch)<input type="text" id="gh-branch" value="main" placeholder="main o master"></label>
+          <label>Ruta del archivo JSON<input type="text" id="gh-path" value="datos.json" placeholder="datos.json"></label>
+        </div>
+        <label style="margin-top:12px;">Personal Access Token (PAT de GitHub)<input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></label>
+        
+        <div class="backup-actions" style="display:flex;gap:12px;margin-top:15px;flex-wrap:wrap;align-items:center;">
+          <button type="button" class="btn btn-primary" id="gh-save-config">💾 Guardar Credenciales GitHub</button>
+          <button type="button" class="btn btn-primary" id="gh-sync-now" style="background:#23966b;">📥 Cargar datos desde GitHub (Solo leer)</button>
+        </div>
+      </div>
+
 <div class="panel backup-panel" style="margin-top:20px;">
         <h3>Copias de seguridad y Base de datos Local</h3>
         <p class="muted">Exporta o importa todos los datos de solicitudes, agentes y configuración en formato JSON para respaldar o transferir la información entre dispositivos.</p>
