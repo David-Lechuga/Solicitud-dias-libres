@@ -389,44 +389,15 @@ if(deleteRequestBtn){
 
 
 
-// GitHub Sync Configuration & Integration (Auto-save on change, Read-only on demand)
-let ghConfig = JSON.parse(localStorage.getItem("pl_gh_config")) || {
+
+// GitHub Sync Configuration & Integration (Fully automated background sync with preconfigured credentials)
+let ghConfig = {
   owner: "David-Lechuga",
   repo: "Solicitud-dias-libres",
   branch: "main",
   path: "datos.json",
   token: "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"
 };
-
-function initGitHubSettingsForm(){
-  const ownerEl = document.querySelector("#gh-owner");
-  const repoEl = document.querySelector("#gh-repo");
-  const branchEl = document.querySelector("#gh-branch");
-  const pathEl = document.querySelector("#gh-path");
-  const tokenEl = document.querySelector("#gh-token");
-
-  if(ownerEl) ownerEl.value = ghConfig.owner;
-  if(repoEl) repoEl.value = ghConfig.repo;
-  if(branchEl) branchEl.value = ghConfig.branch || "main";
-  if(pathEl) pathEl.value = ghConfig.path || "datos.json";
-  if(tokenEl) tokenEl.value = ghConfig.token;
-}
-
-const saveGhConfigBtn = document.querySelector("#gh-save-config");
-if(saveGhConfigBtn){
-  saveGhConfigBtn.addEventListener("click", ()=>{
-    ghConfig = {
-      owner: document.querySelector("#gh-owner").value.trim(),
-      repo: document.querySelector("#gh-repo").value.trim(),
-      branch: document.querySelector("#gh-branch").value.trim() || "main",
-      path: document.querySelector("#gh-path").value.trim() || "datos.json",
-      token: document.querySelector("#gh-token").value.trim()
-    };
-    localStorage.setItem("pl_gh_config", JSON.stringify(ghConfig));
-    alert("Credenciales de GitHub guardadas correctamente.");
-    loadFromGitHub(false); // Load immediately upon saving config
-  });
-}
 
 function utf8ToB64(str){
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
@@ -487,10 +458,7 @@ async function pushToGitHub(silent = true){
 }
 
 async function loadFromGitHub(silent = true){
-  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token){
-    if(!silent) alert("Por favor, configura el usuario, repositorio y el Token de GitHub en la sección de Configuración.");
-    return;
-  }
+  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token) return;
 
   const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
   const headers = {
@@ -515,26 +483,11 @@ async function loadFromGitHub(silent = true){
         populateSelects();
         renderWeek();
         renderHistory();
-        if(!silent) alert("¡Datos cargados correctamente desde GitHub!");
       }
-    } else {
-      if(!silent) alert("No se encontró el archivo datos.json en el repositorio. Se creará automáticamente al realizar el primer cambio.");
     }
   } catch(err){
-    if(!silent) alert("Error al cargar desde GitHub: " + err.message);
     console.error("Error loadFromGitHub:", err);
   }
-}
-
-const syncNowBtn = document.querySelector("#gh-sync-now");
-if(syncNowBtn){
-  syncNowBtn.addEventListener("click", async ()=>{
-    syncNowBtn.textContent = "Cargando desde GitHub...";
-    syncNowBtn.disabled = true;
-    await loadFromGitHub(false);
-    syncNowBtn.textContent = "📥 Cargar datos desde GitHub (Solo leer)";
-    syncNowBtn.disabled = false;
-  });
 }
 
 // Auto-sync wrapper (debounced push to GitHub on any change)
@@ -562,7 +515,6 @@ function triggerAutoSync(){
 }
 
 window.addEventListener("DOMContentLoaded", async ()=>{
-  initGitHubSettingsForm();
   if(ghConfig.owner && ghConfig.repo && ghConfig.token){
     await loadFromGitHub(true);
   }
