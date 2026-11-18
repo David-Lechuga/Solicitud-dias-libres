@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "syncDate": "2026-11-18T01:25:00.439Z",
+  "agents": [
+    "9432 - PATRICIA",
+    "9433 - OFICIAL PARRA",
+    "11862 - DAVID MELLADO",
+    "9421 - MELCHOR GARCIA",
+    "9436 - JOSE M. PUPO",
+    "9411 - OFICIAL MUÑOZ",
+    "9428 - ANTONIO MALIA",
+    "16799 - JOSE MARIA",
+    "9414 - J.G. APARICIO",
+    "14641 - J.A. CORREA",
+    "9416 - FRANCISCO ASENCIO",
+    "14643 - SARMIENTO",
+    "14642 - PEDRO GUERRERO",
+    "9417 - A. CAAMAÑO",
+    "9423 - J.G. GUNDIN",
+    "16798 - ANA ANDRADES",
+    "9437 - VICTOR GUERRA",
+    "9426 - DAVID LECHUGA",
+    "9431 - OFICIAL CORTABARRA",
+    "9434 - SAMUEL PEREZ",
+    "9427 - DOLORES LOPEZ"
+  ],
+  "leaveTypes": [
+    "Libre Disposición",
+    "Horas por Juicio",
+    "Asuntos Familiares",
+    "Asuntos Propios",
+    "Examen",
+    "Cursos de Formación",
+    "Baja",
+    "Otros",
+    "Horas Sindicales",
+    "Horas de Prevención"
+  ],
+  "requests": []
+}
