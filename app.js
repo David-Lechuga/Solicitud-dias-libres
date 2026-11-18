@@ -387,7 +387,9 @@ if(deleteRequestBtn){
   });
 }
 
-// GitHub Sync Configuration & Integration
+
+
+// GitHub Sync Configuration & Integration (Auto-save on change, Read-only on demand)
 let ghConfig = JSON.parse(localStorage.getItem("pl_gh_config")) || {
   owner: "",
   repo: "",
@@ -422,14 +424,20 @@ if(saveGhConfigBtn){
     };
     localStorage.setItem("pl_gh_config", JSON.stringify(ghConfig));
     alert("Credenciales de GitHub guardadas correctamente.");
+    loadFromGitHub(false); // Load immediately upon saving config
   });
 }
 
-async function syncWithGitHub(silent = false){
-  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token){
-    if(!silent) alert("Por favor, configura el usuario, repositorio y el Token de GitHub en la sección de Configuración.");
-    return;
-  }
+function utf8ToB64(str){
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+}
+
+function b64ToUtf8(str){
+  return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+}
+
+async function pushToGitHub(silent = true){
+  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token) return;
 
   const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
   const headers = {
@@ -439,28 +447,13 @@ async function syncWithGitHub(silent = false){
   };
 
   try {
-    // 1. Try to fetch existing file to get current SHA and data
     let currentSha = null;
-    let remoteData = null;
-
     const getRes = await fetch(`${url}?ref=${ghConfig.branch}`, { headers });
     if(getRes.ok){
       const fileData = await getRes.json();
       currentSha = fileData.sha;
-      // Decode base64 content
-      const jsonString = new TextDecoder().decode(Uint8Array.from(atob(fileData.content), c => c.charCodeAt(0)));
-      remoteData = JSON.parse(jsonString);
-    } else if(getRes.status !== 404){
-      const errJson = await getRes.json();
-      throw new Error(errJson.message || "Error al conectar con GitHub");
     }
 
-    // Compare or merge / push local state
-    // For simplicity and full GitHub as single source of truth:
-    // If remote exists and has data, we can merge or ask, or push local data to remote.
-    // Let's push local data to GitHub so any device update is propagated, or if local is empty/older, pull.
-    // Actually, let's push current local state to GitHub (or if remote is newer, pull).
-    
     const payloadData = {
       version: "1.0",
       syncDate: new Date().toISOString(),
@@ -469,10 +462,10 @@ async function syncWithGitHub(silent = false){
       requests: requests
     };
 
-    const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(payloadData, null, 2))));
+    const contentEncoded = utf8ToB64(JSON.stringify(payloadData, null, 2));
 
     const putBody = {
-      message: `Sync solicitudes PL - ${new Date().toLocaleString()}`,
+      message: `Auto-sync solicitudes PL - ${new Date().toLocaleString()}`,
       content: contentEncoded,
       branch: ghConfig.branch
     };
@@ -486,18 +479,18 @@ async function syncWithGitHub(silent = false){
 
     if(!putRes.ok){
       const errJson = await putRes.json();
-      throw new Error(errJson.message || "Error al guardar en GitHub");
+      console.error("Error al autoguardar en GitHub:", errJson.message);
     }
-
-    if(!silent) alert("¡Sincronización con GitHub completada con éxito!");
   } catch(err){
-    if(!silent) alert("Error en la sincronización con GitHub: " + err.message);
-    console.error(err);
+    console.error("Excepción en auto-sync GitHub:", err);
   }
 }
 
 async function loadFromGitHub(silent = true){
-  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token) return;
+  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token){
+    if(!silent) alert("Por favor, configura el usuario, repositorio y el Token de GitHub en la sección de Configuración.");
+    return;
+  }
 
   const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
   const headers = {
@@ -510,63 +503,64 @@ async function loadFromGitHub(silent = true){
     const res = await fetch(`${url}?ref=${ghConfig.branch}`, { headers });
     if(res.ok){
       const fileData = await res.json();
-      const jsonString = new TextDecoder().decode(Uint8Array.from(atob(fileData.content), c => c.charCodeAt(0)));
+      const jsonString = b64ToUtf8(fileData.content);
       const data = JSON.parse(jsonString);
       if(data.agents && data.leaveTypes && data.requests){
         AGENTS = data.agents;
         LEAVE_TYPES = data.leaveTypes;
         requests = data.requests;
-        saveConfig();
-        saveRequests();
+        localStorage.setItem("pl_agents", JSON.stringify(AGENTS));
+        localStorage.setItem("pl_types", JSON.stringify(LEAVE_TYPES));
+        localStorage.setItem("pl_requests", JSON.stringify(requests));
         populateSelects();
         renderWeek();
         renderHistory();
-        if(!silent) alert("Datos descargados y actualizados desde GitHub.");
+        if(!silent) alert("¡Datos cargados correctamente desde GitHub!");
       }
+    } else {
+      if(!silent) alert("No se encontró el archivo datos.json en el repositorio. Se creará automáticamente al realizar el primer cambio.");
     }
   } catch(err){
-    console.error("No se pudo cargar automáticamente desde GitHub:", err);
+    if(!silent) alert("Error al cargar desde GitHub: " + err.message);
+    console.error("Error loadFromGitHub:", err);
   }
 }
 
 const syncNowBtn = document.querySelector("#gh-sync-now");
 if(syncNowBtn){
   syncNowBtn.addEventListener("click", async ()=>{
-    syncNowBtn.textContent = "Sincronizando...";
+    syncNowBtn.textContent = "Cargando desde GitHub...";
     syncNowBtn.disabled = true;
-    await syncWithGitHub(false);
-    syncNowBtn.textContent = "☁️ Sincronizar con GitHub (Subir/Descargar)";
+    await loadFromGitHub(false);
+    syncNowBtn.textContent = "📥 Cargar datos desde GitHub (Solo leer)";
     syncNowBtn.disabled = false;
   });
 }
 
-// Auto load from GitHub on startup if configured
-window.addEventListener("DOMContentLoaded", ()=>{
-  initGitHubSettingsForm();
-  loadFromGitHub(true);
-});
-
-// Auto-sync wrapper for GitHub
+// Auto-sync wrapper (debounced push to GitHub on any change)
 let isSyncing = false;
 let syncTimeout = null;
 
 function triggerAutoSync(){
+  localStorage.setItem("pl_agents", JSON.stringify(AGENTS));
+  localStorage.setItem("pl_types", JSON.stringify(LEAVE_TYPES));
+  localStorage.setItem("pl_requests", JSON.stringify(requests));
+
   if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token) return;
   if(syncTimeout) clearTimeout(syncTimeout);
   syncTimeout = setTimeout(async () => {
     if(isSyncing) return;
     isSyncing = true;
     try {
-      await syncWithGitHub(true); // silent sync
+      await pushToGitHub(true);
     } catch(e) {
-      console.error("Auto-sync error:", e);
+      console.error("Background auto-sync error:", e);
     } finally {
       isSyncing = false;
     }
-  }, 1500); // Wait 1.5 seconds after last change to batch edits
+  }, 1200);
 }
 
-// Auto load from GitHub on startup if configured
 window.addEventListener("DOMContentLoaded", async ()=>{
   initGitHubSettingsForm();
   if(ghConfig.owner && ghConfig.repo && ghConfig.token){
