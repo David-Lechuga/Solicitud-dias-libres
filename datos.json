@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "syncDate": "2026-11-18T01:47:45.659Z",
+  "syncDate": "2026-11-18T01:49:07.406Z",
   "agents": [
     "9432 - PATRICIA",
     "9433 - OFICIAL PARRA",
@@ -37,20 +37,6 @@
     "Horas de Prevención"
   ],
   "requests": [
-    {
-      "id": "7df8c739-3085-47d4-b934-529fc4adf6d6",
-      "agent": "9426 - DAVID LECHUGA",
-      "type": "Horas Sindicales",
-      "date": "2026-11-21",
-      "shift": "MAÑANA",
-      "submittedDate": "2026-11-18",
-      "submittedTime": "03:00",
-      "status": "pending",
-      "called": "",
-      "observations": "",
-      "createdAt": "2026-11-18T01:46:42.254Z",
-      "resolvedAt": ""
-    },
     {
       "id": "904b7d43-ea3e-4362-ab0a-1204a5622851",
       "agent": "9426 - DAVID LECHUGA",
