@@ -17,6 +17,7 @@ let AGENTS = JSON.parse(localStorage.getItem("pl_agents")) || DEFAULT_AGENTS;
 let LEAVE_TYPES = JSON.parse(localStorage.getItem("pl_types")) || DEFAULT_LEAVE_TYPES;
 
 function saveConfig(){
+  triggerAutoSync();
   localStorage.setItem("pl_agents", JSON.stringify(AGENTS));
   localStorage.setItem("pl_types", JSON.stringify(LEAVE_TYPES));
 }
@@ -30,6 +31,7 @@ const DEFAULT_REQUESTS = [];
 let requests = JSON.parse(localStorage.getItem("pl_requests")) || DEFAULT_REQUESTS;
 
 function saveRequests(){
+  triggerAutoSync();
   localStorage.setItem("pl_requests", JSON.stringify(requests));
 }
 
@@ -369,7 +371,6 @@ if(applyFiltersBtn) applyFiltersBtn.addEventListener("click",renderHistory);
 const clearFiltersBtn = document.querySelector("#clear-filters");
 if(clearFiltersBtn) clearFiltersBtn.addEventListener("click",()=>{["history-from","history-to","history-status"].forEach(id=>document.querySelector("#"+id).value="");renderHistory()});
 
-populateSelects();renderWeek();renderHistory();
 if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
 
 const deleteRequestBtn = document.querySelector("#delete-request");
@@ -543,4 +544,35 @@ if(syncNowBtn){
 window.addEventListener("DOMContentLoaded", ()=>{
   initGitHubSettingsForm();
   loadFromGitHub(true);
+});
+
+// Auto-sync wrapper for GitHub
+let isSyncing = false;
+let syncTimeout = null;
+
+function triggerAutoSync(){
+  if(!ghConfig.owner || !ghConfig.repo || !ghConfig.token) return;
+  if(syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    if(isSyncing) return;
+    isSyncing = true;
+    try {
+      await syncWithGitHub(true); // silent sync
+    } catch(e) {
+      console.error("Auto-sync error:", e);
+    } finally {
+      isSyncing = false;
+    }
+  }, 1500); // Wait 1.5 seconds after last change to batch edits
+}
+
+// Auto load from GitHub on startup if configured
+window.addEventListener("DOMContentLoaded", async ()=>{
+  initGitHubSettingsForm();
+  if(ghConfig.owner && ghConfig.repo && ghConfig.token){
+    await loadFromGitHub(true);
+  }
+  populateSelects();
+  renderWeek();
+  renderHistory();
 });
